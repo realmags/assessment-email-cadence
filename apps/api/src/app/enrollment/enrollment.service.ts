@@ -6,14 +6,9 @@ import {
   updateCadenceSignal,
   getStateQuery,
   Step,
+  Enrollment,
+  WorkflowStatus,
 } from '@email-cadence/temporal-workflow';
-
-type Enrollment = {
-  cadenceId: string;
-  contactEmail: string;
-  workflowId: string;
-  createdAt: number;
-};
 
 @Injectable()
 export class EnrollmentService {
@@ -46,7 +41,7 @@ export class EnrollmentService {
 
     this.enrollments.push(enrollment);
 
-    return { workflowId, status: 'STARTED' };
+    return { workflowId, status: WorkflowStatus.Started };
   }
 
   getEnrollments() {

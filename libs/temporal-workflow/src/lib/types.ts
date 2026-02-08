@@ -13,6 +13,7 @@ export type Cadence = {
 };
 
 export enum WorkflowStatus {
+  Started = 'STARTED',
   Running = 'RUNNING',
   Completed = 'COMPLETED',
 }
@@ -32,4 +33,11 @@ export type SendEmailResponse = {
   success: boolean;
   messageId: string;
   timestamp: number;
+};
+
+export type Enrollment = {
+  cadenceId: string;
+  contactEmail: string;
+  workflowId: string;
+  createdAt: number;
 };
