@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
+import useSWR from 'swr';
 
 type Cadence = {
   id: string;
@@ -14,12 +15,6 @@ enum WorkflowStatus {
   Completed = 'COMPLETED',
 }
 
-type WorkflowState = {
-  currentStepIndex: number;
-  stepsVersion: number;
-  status: WorkflowStatus;
-};
-
 type Enrollment = {
   cadenceId: string;
   contactEmail: string;
@@ -28,29 +23,17 @@ type Enrollment = {
 };
 
 export default function Dashboard() {
-  const [cadences, setCadences] = useState<Cadence[]>([]);
-  const [enrollments, setEnrollments] = useState<
-    (Enrollment & { state: WorkflowState })[]
-  >([]);
   const [selectedCadenceId, setSelectedCadenceId] = useState('');
   const [email, setEmail] = useState('');
   const [selectedWorkflowId, setSelectedWorkflowId] = useState('');
   const [updateSteps, setUpdateSteps] = useState('');
-
-  useEffect(() => {
-    fetchCadences();
-    fetchEnrollments();
-
-    const interval = setInterval(fetchEnrollments, 5000);
-    return () => clearInterval(interval);
-  }, []);
 
   const fetchCadences = async () => {
     const res = await fetch(
       `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/cadences`,
     );
     if (res.ok) {
-      setCadences(await res.json());
+      return res.json();
     }
   };
 
@@ -68,7 +51,6 @@ export default function Dashboard() {
             );
             if (statusRes.ok) {
               const status = await statusRes.json();
-              console.log('updating enrollment', { ...e, state: status });
               return { ...e, state: status };
             }
           } catch (err) {
@@ -78,9 +60,21 @@ export default function Dashboard() {
           return e;
         }),
       );
-      setEnrollments(dataWithStatus);
+
+      return dataWithStatus;
     }
   };
+
+  const { data: cadences = [] } = useSWR<Cadence[]>(
+    `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/cadences`,
+    fetchCadences,
+  );
+
+  const { data: enrollments = [], mutate: mutateEnrollments } = useSWR(
+    `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/enrollments`,
+    fetchEnrollments,
+    { refreshInterval: 5000 },
+  );
 
   const handleEnroll = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -101,7 +95,7 @@ export default function Dashboard() {
     if (res.ok) {
       alert('Enrolled successfully!');
       setEmail('');
-      fetchEnrollments();
+      mutateEnrollments();
     } else {
       alert('Failed to enroll');
     }
@@ -121,7 +115,7 @@ export default function Dashboard() {
       );
       if (res.ok) {
         alert('Workflow signaled!');
-        fetchEnrollments();
+        mutateEnrollments();
       } else {
         alert('Failed to signal workflow');
       }
@@ -242,7 +236,7 @@ export default function Dashboard() {
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold">Active Enrollments</h2>
             <button
-              onClick={fetchEnrollments}
+              onClick={() => mutateEnrollments()}
               className="text-blue-600 hover:text-blue-800"
             >
               Refresh
